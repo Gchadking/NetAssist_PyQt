@@ -1,10 +1,9 @@
 import socket
 import threading
 from time import sleep
-
 from PyQt5.QtCore import pyqtSignal
 
-from Network import StopThreading
+from . import StopThreading
 
 
 class TcpLogic:
@@ -57,15 +56,23 @@ class TcpLogic:
             for client, address in self.client_socket_list:
                 try:
                     recv_msg = client.recv(4096)
+
                 except Exception as ret:
                     pass
                 else:
                     if recv_msg:
-                        info = recv_msg.decode("utf-8")
                         msg = f"来自IP:{address[0]}端口:{address[1]}:"
                         self.tcp_signal_write_msg.emit(msg)
-                        self.tcp_signal_write_info.emit(info, self.InfoRec)
-
+                        try:
+                            info = recv_msg.decode("utf-8")
+                            self.tcp_signal_write_info.emit(info, self.InfoRec)
+                        except Exception as ret:
+                            if recv_msg.hex():    #将16进制bytes b'\xaa'转换成utf-8 str 'aa'
+                                info = recv_msg.hex()
+                                self.tcp_signal_write_info.emit(info, self.InfoRec)
+                            else:
+                                msg="数据格式错误"+ret.__str__()
+                                self.tcp_signal_write_msg.emit(msg)
                     else:
                         client.close()
                         self.client_socket_list.remove((client, address))
@@ -162,6 +169,7 @@ class TcpLogic:
                 StopThreading.stop_thread(self.client_th)
             except Exception as ret:
                 pass
+
 
     NoLink = -1
     ServerTCP = 0

@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget
-
+import datetime
+import base64
 from Network import get_host_ip
 from UI import MainWindowUI
 from UI.MyWidgets import PortInputDialog
@@ -21,9 +22,11 @@ class WidgetLogic(QWidget):
         self.setWindowFlags(Qt.WindowStaysOnTopHint)  # 保持窗口最前
         self.__ui.MyHostAddrLineEdit.setText(get_host_ip())  # 显示本机IP地址
 
-        self.protocol_type = "TCP"
+        self.protocol_type = "TCP Server"
         self.link_flag = self.NoLink
         self.receive_show_flag = True  # 是否显示接收到的消息
+        self.send_HEX_flag=False       #是否以十六进制发送
+        self.receive_HEX_flag=False    #是否以十六进制接收
         self.SendCounter = 0
         self.ReceiveCounter = 0
         self.dir = None
@@ -40,6 +43,10 @@ class WidgetLogic(QWidget):
         self.__ui.ReceivePauseCheckBox.toggled.connect(
             self.receive_pause_checkbox_toggled_handler
         )
+        self.__ui.HEXReceiveCheckBox.toggled.connect(self.receive_HEX_checkbox_toggled_handler)
+        self.__ui.SendHEXCheckBox.toggled.connect(self.send_HEX_checkbox_toggled_handler)
+        if self.protocol_type=="TCP Server":
+            self.client_editable(False)
 
     def connect_button_toggled_handler(self, state):
         if state:
@@ -57,6 +64,12 @@ class WidgetLogic(QWidget):
         self.__ui.TargetIPLineEdit.setReadOnly(not able)
         self.__ui.TargetPortLineEdit.setReadOnly(not able)
 
+    def client_editable(self,able:bool=True):
+        self.__ui.TargetIPLineEdit.setDisabled(not able)
+        self.__ui.TargetPortLineEdit.setDisabled(not able)
+        self.__ui.MyPortLineEdit.setDisabled( able)
+        self.__ui.MyHostAddrLineEdit.setDisabled(able)
+
     def protocol_type_combobox_handler(self, p_type):
         """ProtocolTypeComboBox的槽函数"""
         self.protocol_type = p_type
@@ -69,55 +82,56 @@ class WidgetLogic(QWidget):
             self.__ui.SendPlainTextEdit.setEnabled(True)
             self.__ui.SendPlainTextEdit.clear()
             self.__ui.OpenFilePushButton.setText("打开文件")
+            if self.protocol_type == "TCP Server":
+                self.client_editable(False)
+            elif self.protocol_type == "TCP Client":
+                self.client_editable(True)
+
 
     def click_link_handler(self):
         """连接按钮连接时的槽函数"""
-        server_flag = False  # 如果没有输入目标IP与端口号，则作为Server使用
-        target_ip = str(self.__ui.TargetIPLineEdit.text())
-
         def get_int_port(port):
             # 用户未输入端口则置为-1
             return -1 if port == "" else int(port)
 
-        my_port = get_int_port(self.__ui.MyPortLineEdit.text())
-        target_port = get_int_port(self.__ui.TargetPortLineEdit.text())
-        self.editable(False)  # 建立连接后不可再修改参数
+        if self.protocol_type=="TCP Server":
+            server_flag =True
+            my_port = get_int_port(self.__ui.MyPortLineEdit.text())
+            self.editable(False)
+            if my_port == -1 :
+                mb = QMessageBox(QMessageBox.Critical, "错误", "请输入端口", QMessageBox.Ok, self)
+                mb.open()
+                self.editable(True)
+                self.__ui.ConnectButton.setChecked(False)
+                return None
 
-        if my_port == -1 and target_port == -1 and target_ip == "":
-            mb = QMessageBox(QMessageBox.Critical, "错误", "请输入信息", QMessageBox.Ok, self)
-            mb.open()
-            self.editable(True)
-            self.__ui.ConnectButton.setChecked(False)
-            return None
-        elif my_port != -1 and target_port != -1 and target_ip != "":
-            mb = QMessageBox(
-                QMessageBox.Critical, "错误", "输入的信息过多", QMessageBox.Ok, self
-            )
-            mb.open()
-            self.editable(True)
-            self.__ui.ConnectButton.setChecked(False)
-            return None
-        elif target_port == -1 and target_ip == "":
-            server_flag = True
-        elif target_port == -1 and target_ip != "":
-            input_d = PortInputDialog(self)
-            input_d.setWindowTitle("服务启动失败")
-            input_d.setLabelText("请输入目标端口号作为Client启动，或取消")
-            input_d.intValueSelected.connect(
-                lambda val: self.__ui.TargetPortLineEdit.setText(str(val))
-            )
-            input_d.open()
-            self.__ui.ConnectButton.setChecked(False)
-            # 提前终止槽函数
-            return None
-        elif target_port != -1 and target_ip == "":
-            mb = QMessageBox(
-                QMessageBox.Critical, "Client启动错误", "请输入目标IP地址", QMessageBox.Ok, self
-            )
-            mb.open()
-            self.__ui.ConnectButton.setChecked(False)
-            # 提前终止槽函数
-            return None
+        if self.protocol_type=="TCP Client":
+            server_flag = False
+            target_ip = str(self.__ui.TargetIPLineEdit.text())
+            target_port = get_int_port(self.__ui.TargetPortLineEdit.text())
+            self.editable(False)
+            if target_port == -1 and target_ip != "":
+                input_d = PortInputDialog(self)
+                input_d.setWindowTitle("服务启动失败")
+                input_d.setLabelText("请输入目标端口号作为Client启动，或取消")
+                input_d.intValueSelected.connect(
+                    lambda val: self.__ui.TargetPortLineEdit.setText(str(val))
+                )
+                input_d.open()
+                self.editable(True)
+                self.__ui.ConnectButton.setChecked(False)
+                # 提前终止槽函数
+                return None
+            elif target_port != -1 and target_ip == "":
+                mb = QMessageBox(
+                    QMessageBox.Critical, "Client启动错误", "请输入目标IP地址", QMessageBox.Ok, self
+                )
+                mb.open()
+                self.editable(True)
+                self.__ui.ConnectButton.setChecked(False)
+                # 提前终止槽函数
+                return None
+
         if self.protocol_type == "Web Server" and not self.dir:
             # 处理用户未选择工作路径情况下连接网络
             self.dir = QFileDialog.getExistingDirectory(self, "选择index.html所在路径", "./")
@@ -129,13 +143,15 @@ class WidgetLogic(QWidget):
                 self.__ui.ConnectButton.setChecked(False)
                 return None
 
-        if self.protocol_type == "TCP" and server_flag:
+        if self.protocol_type == "TCP Server" and server_flag:
             self.link_signal.emit((self.ServerTCP, "", my_port))
             self.link_flag = self.ServerTCP
+
             self.__ui.StateLabel.setText("TCP服务端")
-        elif self.protocol_type == "TCP" and not server_flag:
+        elif self.protocol_type == "TCP Client" and not server_flag:
             self.link_signal.emit((self.ClientTCP, target_ip, target_port))
             self.link_flag = self.ClientTCP
+
             self.__ui.StateLabel.setText("TCP客户端")
         elif self.protocol_type == "UDP" and server_flag:
             self.link_signal.emit((self.ServerUDP, "", my_port))
@@ -160,6 +176,8 @@ class WidgetLogic(QWidget):
             send_msg = self.__ui.SendPlainTextEdit.toPlainText()
             if loop_flag == 0:
                 self.send_signal.emit(send_msg)
+                self.__ui.SendPlainTextEdit.setPlainText('') #清空已发送内容
+                self.__ui.SendPlainTextEdit.textCursor()
             elif loop_flag == 2:
                 send_timer = QTimer(self)
                 send_timer.start(int(self.__ui.LoopSendSpinBox.value()))
@@ -173,9 +191,11 @@ class WidgetLogic(QWidget):
 
     def msg_write(self, msg: str):
         """将提示消息写入ReceivePlainTextEdit"""
-        # TODO 显示接收时间
+        # 显示接收时间,包含毫秒显示
+        currTime=datetime.datetime.now().strftime('%H:%M:%S.%f')
+        msg_time=currTime+msg
         if self.receive_show_flag:
-            self.__ui.ReceivePlainTextEdit.appendPlainText(msg)
+            self.__ui.ReceivePlainTextEdit.appendPlainText(msg_time)
 
     def info_write(self, info: str, mode: int):
         """
@@ -186,14 +206,24 @@ class WidgetLogic(QWidget):
         """
         if self.receive_show_flag:
             if mode == self.InfoRec:
+                if self.receive_HEX_flag:  # 以十六进制接收
+                    info=bytes(info,encoding='utf-8') #转换成bytes类型
+                    info_hex = base64.b16encode(info) #16进制编码
+                else:
+                    info_hex = info
+
                 self.__ui.ReceivePlainTextEdit.appendHtml(
-                    f'<font color="blue">{info}</font>'
+                    f'<font color="blue">{info_hex}</font>'
                 )
                 self.ReceiveCounter += 1
                 self.counter_signal.emit(self.SendCounter, self.ReceiveCounter)
             elif mode == self.InfoSend:
+                if self.send_HEX_flag: #以十六进制发送
+                    info_hex=base64.b16encode(info.encode())
+                else:
+                    info_hex=info
                 self.__ui.ReceivePlainTextEdit.appendHtml(
-                    f'<font color="green">{info}</font>'
+                    f'<font color="green">{info_hex}</font>'
                 )
             self.__ui.ReceivePlainTextEdit.appendHtml("\n")
         else:
@@ -268,6 +298,18 @@ class WidgetLogic(QWidget):
         else:
             self.receive_show_flag = True
 
+    def send_HEX_checkbox_toggled_handler(self,ste:bool):
+        """以十六进制发送的复选框的槽函数"""
+        if ste:
+            self.send_HEX_flag=True
+        else:
+            self.send_HEX_flag=False
+    def receive_HEX_checkbox_toggled_handler(self,ste:bool):
+        """以十六进制接收的复选框的槽函数"""
+        if ste:
+            self.receive_HEX_flag=True
+        else:
+            self.receive_HEX_flag=False
     # TODO 最小化到托盘
 
     NoLink = -1

@@ -74,7 +74,12 @@
       <widget class="QComboBox" name="ProtocolTypeComboBox">
        <item>
         <property name="text">
-         <string>TCP</string>
+         <string>TCP Server</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>TCP Client</string>
         </property>
        </item>
        <item>
@@ -793,8 +798,8 @@
    <slot>clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>771</x>
-     <y>503</y>
+     <x>191</x>
+     <y>505</y>
     </hint>
     <hint type="destinationlabel">
      <x>458</x>
