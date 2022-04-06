@@ -52,6 +52,8 @@ class TcpLogic:
                 self.client_socket_list.append((client_socket, client_address))
                 msg = f"TCP服务端已连接IP:{client_address[0]}端口:{client_address[1]}\n"
                 self.tcp_signal_write_msg.emit(msg)
+                # client_socket.setsockopt(socket.SOL_SOCKET,socket.SO_KEEPALIVE,True)
+                # client_socket.ioctl(socket.SIO_KEEPALIVE_VALS,(1,30*1000,30*1000))
             # 轮询客户端套接字列表，接收数据
             for client, address in self.client_socket_list:
                 try:
@@ -76,6 +78,8 @@ class TcpLogic:
                     else:
                         client.close()
                         self.client_socket_list.remove((client, address))
+                        msg = f"客户端{address[0]}已断开"   #显示客户端已断开
+                        self.tcp_signal_write_msg.emit(msg)
 
     def tcp_client_start(self, ip: str, port: int) -> None:
         """

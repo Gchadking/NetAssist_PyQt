@@ -1,8 +1,10 @@
 import sys
-
+import win32api
+import win32event
+from winerror import ERROR_ALREADY_EXISTS
 from PyQt5.QtWidgets import QApplication
 
-from MainWindowLogic import WidgetLogic
+from MainWindowLogic import WidgetLogic,TrayIcon
 from Network import NetworkLogic
 
 
@@ -15,7 +17,6 @@ class CommonHelper:
         """读取QSS样式表的方法"""
         with open(style, "r") as f:
             return f.read()
-
 
 class MainWindow(WidgetLogic, NetworkLogic):
     def __init__(self, parent=None):
@@ -73,7 +74,14 @@ class MainWindow(WidgetLogic, NetworkLogic):
 
 
 if __name__ == "__main__":
+    mutexname = "网络助手"  # 互斥体命名
+    mutex = win32event.CreateMutex(None, False, mutexname) #只允许同时运行一个程序
+    if (win32api.GetLastError() == ERROR_ALREADY_EXISTS):
+        print('程序已启动')
+        exit(0)
+
     app = QApplication(sys.argv)
+    QApplication.setQuitOnLastWindowClosed(False) #关闭按钮不退出程序，托盘最小化
     window = MainWindow()
     styleFile = "./Style/qss/flat_white.qss"
     import Style.qss_rc  # 导入资源
@@ -81,4 +89,6 @@ if __name__ == "__main__":
     qssStyle = CommonHelper.read_qss(styleFile)
     window.setStyleSheet(qssStyle)
     window.show()
+    ti = TrayIcon(window) #最小化到托盘
+    ti.show()
     sys.exit(app.exec_())
