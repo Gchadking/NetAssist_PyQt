@@ -46,8 +46,6 @@ class WidgetLogic(QWidget):
         )
         self.__ui.HEXReceiveCheckBox.toggled.connect(self.receive_HEX_checkbox_toggled_handler)
         self.__ui.SendHEXCheckBox.toggled.connect(self.send_HEX_checkbox_toggled_handler)
-        if self.protocol_type=="TCP Server":
-            self.client_editable(False)
 
     def connect_button_toggled_handler(self, state):
         if state:
@@ -61,15 +59,8 @@ class WidgetLogic(QWidget):
     def editable(self, able: bool = True):
         """当连接建立后，部分选项不可再修改"""
         self.__ui.ProtocolTypeComboBox.setDisabled(not able)
-        self.__ui.MyPortLineEdit.setReadOnly(not able)
-        self.__ui.TargetIPLineEdit.setReadOnly(not able)
-        self.__ui.TargetPortLineEdit.setReadOnly(not able)
-
-    def client_editable(self,able:bool=True):
-        self.__ui.TargetIPLineEdit.setDisabled(not able)
-        self.__ui.TargetPortLineEdit.setDisabled(not able)
-        self.__ui.MyPortLineEdit.setDisabled( able)
-        self.__ui.MyHostAddrLineEdit.setDisabled(able)
+        self.__ui.MyHostAddrLineEdit.setDisabled(not able)
+        self.__ui.MyPortLineEdit.setDisabled(not able)
 
     def protocol_type_combobox_handler(self, p_type):
         """ProtocolTypeComboBox的槽函数"""
@@ -83,10 +74,13 @@ class WidgetLogic(QWidget):
             self.__ui.SendPlainTextEdit.setEnabled(True)
             self.__ui.SendPlainTextEdit.clear()
             self.__ui.OpenFilePushButton.setText("打开文件")
-            if self.protocol_type == "TCP Server":
-                self.client_editable(False)
-            elif self.protocol_type == "TCP Client":
-                self.client_editable(True)
+        #切换TCP 客户端与服务器显示
+        if self.protocol_type == "TCP Server":
+            self.__ui.MyHostAddrLabel.setText('本地IP地址')
+            self.__ui.MyPortLabel.setText("本地端口号")
+        elif self.protocol_type == "TCP Client":
+            self.__ui.MyHostAddrLabel.setText('服务器IP地址')
+            self.__ui.MyPortLabel.setText("服务器端口")
 
 
     def click_link_handler(self):
@@ -108,15 +102,15 @@ class WidgetLogic(QWidget):
 
         if self.protocol_type=="TCP Client":
             server_flag = False
-            target_ip = str(self.__ui.TargetIPLineEdit.text())
-            target_port = get_int_port(self.__ui.TargetPortLineEdit.text())
+            target_ip = str(self.__ui.MyHostAddrLineEdit.text())
+            target_port = get_int_port(self.__ui.MyPortLineEdit.text())
             self.editable(False)
             if target_port == -1 and target_ip != "":
                 input_d = PortInputDialog(self)
                 input_d.setWindowTitle("服务启动失败")
                 input_d.setLabelText("请输入目标端口号作为Client启动，或取消")
                 input_d.intValueSelected.connect(
-                    lambda val: self.__ui.TargetPortLineEdit.setText(str(val))
+                    lambda val: self.__ui.MyPortLineEdit.setText(str(val))
                 )
                 input_d.open()
                 self.editable(True)

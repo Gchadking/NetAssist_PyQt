@@ -55,6 +55,21 @@ class ConnectButton(QPushButton):
         else:
             self.setText("断开连接")
 
+class OpenButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.toggled.connect(self.toggled_slot)
+
+    def toggled_slot(self):
+        """
+        连接按钮状态切换时的额外操作
+        """
+        if not self.isChecked():
+            self.setText("打开")
+        else:
+            self.setText("关闭")
+
 
 class CounterResetLabel(QLabel):
     clicked = pyqtSignal()

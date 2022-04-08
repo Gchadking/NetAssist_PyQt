@@ -109,7 +109,7 @@ class TcpLogic:
         while True:
             recv_msg = self.tcp_socket.recv(4096)
             if recv_msg:
-                info = recv_msg.decode("utf-8")
+                info = recv_msg.decode("utf-8",'ignore') #对非utf-8进行忽略，防止异常
                 msg = f"来自IP:{address[0]}端口:{address[1]}:"
                 self.tcp_signal_write_msg.emit(msg)
                 self.tcp_signal_write_info.emit(info, self.InfoRec)
@@ -162,7 +162,7 @@ class TcpLogic:
 
         elif self.link_flag == self.ClientTCP:
             try:
-                self.tcp_socket.shutdown(socket.SHUT_RDWR)
+                self.tcp_socket.shutdown(socket.SHUT_WR) #断开网络连接，保持可读，不可写，否则receive接收报错
                 self.tcp_socket.close()
                 msg = "已断开网络\n"
                 self.tcp_signal_write_msg.emit(msg)
