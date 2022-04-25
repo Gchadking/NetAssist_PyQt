@@ -10,9 +10,12 @@ from UI.MyWidgets import PortInputDialog
 
 class WidgetLogic(QWidget):
     link_signal = pyqtSignal(tuple)  # 连接类型, 目标IP, 本机/目标端口
+    seri_link_signal=pyqtSignal(tuple) #串口类型
     disconnect_signal = pyqtSignal()
     send_signal = pyqtSignal(str)
     counter_signal = pyqtSignal(int, int)
+    ParityDic = {'NONE': 0, 'ODD': 3, 'EVEN': 2, 'MARK': 5, 'SPACE': 4}
+    StopbitDic = {'1 bit': 1, '1.5 bit': 3, '2 bit': 2}
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -46,6 +49,8 @@ class WidgetLogic(QWidget):
         )
         self.__ui.HEXReceiveCheckBox.toggled.connect(self.receive_HEX_checkbox_toggled_handler)
         self.__ui.SendHEXCheckBox.toggled.connect(self.send_HEX_checkbox_toggled_handler)
+        self.__ui.openButton.toggled.connect(self.serial_connect_button_toggle_handler)
+
 
     def connect_button_toggled_handler(self, state):
         if state:
@@ -56,11 +61,27 @@ class WidgetLogic(QWidget):
             self.click_disconnect()
             self.editable(True)
 
+    def serial_connect_button_toggle_handler(self,state):
+        if state:
+            self.serial_click_link_handler()
+        else:
+            self.click_disconnect()
+            self.serial_editable(True)
+
+
     def editable(self, able: bool = True):
         """当连接建立后，部分选项不可再修改"""
         self.__ui.ProtocolTypeComboBox.setDisabled(not able)
         self.__ui.MyHostAddrLineEdit.setDisabled(not able)
         self.__ui.MyPortLineEdit.setDisabled(not able)
+
+    def serial_editable(self,able:bool=True):
+        """串口打开后，参数不可修改"""
+        self.__ui.serialPortcomboBox.setDisabled(not able)
+        self.__ui.baudRatecomboBox.setDisabled(not able)
+        self.__ui.dataBitcomboBox.setDisabled(not able)
+        self.__ui.checkBitcomboBox.setDisabled(not able)
+        self.__ui.stopBitcomboBox.setDisabled(not able)
 
     def protocol_type_combobox_handler(self, p_type):
         """ProtocolTypeComboBox的槽函数"""
@@ -162,6 +183,27 @@ class WidgetLogic(QWidget):
             self.link_flag = self.WebServer
             self.__ui.StateLabel.setText("Web server")
 
+    def serial_click_link_handler(self):
+        """串口打开按钮打开处理槽函数"""
+        port=self.__ui.serialPortcomboBox.currentText()
+        self.serial_editable(False)
+        if port=='':
+            mb = QMessageBox(
+                QMessageBox.Critical, "串口错误", "请选择有效串口", QMessageBox.Ok, self
+            )
+            mb.open()
+            self.editable(True)
+            self.__ui.openButton.setChecked(False)
+            # 提前终止槽函数
+            return None
+        baud=int(self.__ui.baudRatecomboBox.currentText())
+        databit=int((self.__ui.dataBitcomboBox.currentText())[0])
+        checkbit=self.ParityDic[self.__ui.checkBitcomboBox.currentText()]
+        stopbit=self.StopbitDic[self.__ui.stopBitcomboBox.currentText()]
+        self.seri_link_signal.emit((self.SeriPort,port,baud,databit,checkbit,stopbit))
+        self.link_flag=self.SeriPort
+        self.__ui.StateLabel.setText("Serial port")
+
     def send_link_handler(self):
         """
         SendButton控件点击触发的槽
@@ -230,6 +272,7 @@ class WidgetLogic(QWidget):
         self.disconnect_signal.emit()
         self.link_flag = self.NoLink
         self.__ui.StateLabel.setText("未连接")
+
 
     def counter_signal_handler(self, send_count, receive_count):
         """控制收发计数器显示变化的槽函数"""
@@ -318,8 +361,10 @@ class WidgetLogic(QWidget):
     ServerUDP = 2
     ClientUDP = 3
     WebServer = 4
+    SeriPort=5
     InfoSend = 0
     InfoRec = 1
+
 
  # 最小化到托盘
 class TrayIcon(QtWidgets.QSystemTrayIcon):

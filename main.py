@@ -22,6 +22,7 @@ class MainWindow(WidgetLogic, NetworkLogic):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.link_signal.connect(self.link_signal_handler)
+        self.seri_link_signal.connect(self.seri_link_signal_handler)
         self.disconnect_signal.connect(self.disconnect_signal_handler)
         self.send_signal.connect(self.send_signal_handler)
         self.tcp_signal_write_msg.connect(self.msg_write)
@@ -29,6 +30,8 @@ class MainWindow(WidgetLogic, NetworkLogic):
         self.udp_signal_write_msg.connect(self.msg_write)
         self.udp_signal_write_info.connect(self.info_write)
         self.signal_write_msg.connect(self.msg_write)
+        self.serp_signal_write_msg.connect(self.msg_write)
+        self.serp_signal_write_info.connect(self.info_write)
 
     def link_signal_handler(self, signal) -> None:
         """
@@ -46,6 +49,12 @@ class MainWindow(WidgetLogic, NetworkLogic):
         elif link_type == self.WebServer:
             self.web_server_start(port)
 
+
+    def seri_link_signal_handler(self,signal):
+        """串口连接信号用的槽函数"""
+        linktype,seriport, baud, databit, checkbit, stopbit = signal
+        self.serial_port_open(seriport, baud, databit, checkbit, stopbit)
+
     def disconnect_signal_handler(self) -> None:
         """断开连接的槽函数"""
         if self.link_flag == self.ServerTCP or self.link_flag == self.ClientTCP:
@@ -54,6 +63,8 @@ class MainWindow(WidgetLogic, NetworkLogic):
             self.udp_close()
         elif self.link_flag == self.WebServer:
             self.web_close()
+        elif self.link_flag ==self.SeriPort:
+            self.serial_port_close()
 
     def send_signal_handler(self, msg: str) -> None:
         """发送按钮的槽函数"""
@@ -63,6 +74,9 @@ class MainWindow(WidgetLogic, NetworkLogic):
         elif self.link_flag == self.ClientUDP:
             self.udp_send(msg)
             self.SendCounter += 1
+        elif self.link_flag == self.SeriPort:
+            self.write(msg)
+            self.SendCounter+=1
         self.counter_signal.emit(self.SendCounter, self.ReceiveCounter)
 
     def closeEvent(self, event) -> None:
