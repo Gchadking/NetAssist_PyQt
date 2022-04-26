@@ -3,9 +3,12 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget
 from PyQt5 import QtWidgets,QtCore, QtGui
 import datetime
 import base64
+import logging
+from logging import config
 from Network import get_host_ip
 from UI import MainWindowUI
 from UI.MyWidgets import PortInputDialog
+from log import Log
 
 
 class WidgetLogic(QWidget):
@@ -19,10 +22,11 @@ class WidgetLogic(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.log=Log(__name__).getlog()
         self.__ui = MainWindowUI.Ui_Form()
         self.__ui.setupUi(self)
         self.__ui.retranslateUi(self)
-
+        self.log.info('started')
         self.setWindowFlags(Qt.WindowStaysOnTopHint)  # 保持窗口最前
         self.__ui.MyHostAddrLineEdit.setText(get_host_ip())  # 显示本机IP地址
 
@@ -162,12 +166,10 @@ class WidgetLogic(QWidget):
         if self.protocol_type == "TCP Server" and server_flag:
             self.link_signal.emit((self.ServerTCP, "", my_port))
             self.link_flag = self.ServerTCP
-
             self.__ui.StateLabel.setText("TCP服务端")
         elif self.protocol_type == "TCP Client" and not server_flag:
             self.link_signal.emit((self.ClientTCP, target_ip, target_port))
             self.link_flag = self.ClientTCP
-
             self.__ui.StateLabel.setText("TCP客户端")
         elif self.protocol_type == "UDP" and server_flag:
             self.link_signal.emit((self.ServerUDP, "", my_port))

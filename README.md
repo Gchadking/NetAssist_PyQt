@@ -8,18 +8,23 @@
 
 ## 简介
 
-学习PyQt5过程中用来练习实践的项目。能实现基本的TCP、UDP、串口通讯连接与信息发送，以及一个简易WebServer。
+学习PyQt5过程中用来练习实践的项目。能实现基本的TCP、UDP、串口通讯连接与信息发送,日志记录，以及一个简易WebServer。
 
 可以搭配博文食用[网络调试助手 程序设计（PyQt5实战）——本仓库参考muzing的博客](https://muzing.top/posts/5ab16c09/)
 
+启动画面
 ![image.png](https://s2.loli.net/2022/04/25/QpaW9Ll1GXij6mr.png)
 
+TCP Server
 ![image.png](https://s2.loli.net/2022/04/25/aeYxM5TOJWqZiQ2.png)
 
+TCP Client
 ![image.png](https://s2.loli.net/2022/04/25/rNYIFKlhm1kRHM4.png)
 
+Serial Port
 ![image.png](https://s2.loli.net/2022/04/25/PlswD4oAO2mCB1q.png)
 
+最小化托盘
 ![image.png](https://s2.loli.net/2022/04/25/3HrlZJD19jhLAyY.png)
 
 
